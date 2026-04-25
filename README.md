@@ -2,7 +2,9 @@
 
 **Fratres X AI** — Gray Swan **Safeguards** blue-team classifier (**Black Templar**), shipped as a **single Docker image** (CPU / contest profile).
 
-**Source:** [`github.com/FratresMedAI/Aether-X-Guard`](https://github.com/FratresMedAI/Aether-X-Guard) — the GitHub **repo name** here is legacy; you can **rename the repository** in GitHub Settings → General to e.g. `Black-Templar` or `black-x-templar` so the URL matches the product name.
+**This repo:** [`github.com/FratresMedAI/Black-X-Templar`](https://github.com/FratresMedAI/Black-X-Templar)
+
+**Related (separate work):** **Aether Guard** will be a **different** classifier (GPT‑5.5–based) in its **own** repository when you create it — not the same product as BxT.
 
 This repository is the **minimal source** that matches the published container: layered guardrails, MiniLM semantic checks, **no GPU LLM judge** in the default image (set `DARKSPACE_LLM_JUDGE` at runtime to change that).
 
