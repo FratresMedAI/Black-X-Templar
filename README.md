@@ -1,4 +1,6 @@
-# Black X Templar (BxT)
+# Black X Templar (BxT) — **Aether X Guard**
+
+**Source repo:** [`FratresMedAI/Aether-X-Guard`](https://github.com/FratresMedAI/Aether-X-Guard)
 
 **Fratres X AI** — Gray Swan **Safeguards** blue-team classifier, shipped as a **single Docker image** (CPU / contest profile).
 
@@ -41,21 +43,11 @@ docker run --rm -p 8080:8080 black-templar-safeguard:gray-swan
 
 **Pin:** `sha256:3b3a159e18c8b29e3282d679064668a7465bdd14d8fcc876e1d52221070415a9` (update in this README if the image changes)
 
-## Monday upload checklist (admins)
+## Monday review checklist (admins)
 
 - [ ] `docker pull` the tag above; run `/health` and one `/v1/classify` call.
-- [ ] Confirm Git **tag** or **release** in this repo matches the **same digest** you hand to Gray Swan.
+- [ ] Confirm this **repo** source tree + **image digest** match what Gray Swan received.
 - [ ] `DARKSPACE_HMAC_SECRET` in production: override per environment; default in image is for contest boot only.
-
-## Create the GitHub repo (first time)
-
-`gh` CLI is optional. On GitHub: **New repository** → name e.g. **`black-x-templar`** under **FratresMedAI** → leave empty (no README). Then:
-
-```bash
-cd black-x-templar
-git remote add origin https://github.com/FratresMedAI/black-x-templar.git
-git push -u origin main
-```
 
 ## License
 
