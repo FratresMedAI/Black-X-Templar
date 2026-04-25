@@ -47,6 +47,16 @@ docker run --rm -p 8080:8080 black-templar-safeguard:gray-swan
 - [ ] Confirm Git **tag** or **release** in this repo matches the **same digest** you hand to Gray Swan.
 - [ ] `DARKSPACE_HMAC_SECRET` in production: override per environment; default in image is for contest boot only.
 
+## Create the GitHub repo (first time)
+
+`gh` CLI is optional. On GitHub: **New repository** → name e.g. **`black-x-templar`** under **FratresMedAI** → leave empty (no README). Then:
+
+```bash
+cd black-x-templar
+git remote add origin https://github.com/FratresMedAI/black-x-templar.git
+git push -u origin main
+```
+
 ## License
 
 See `LICENSE`.
