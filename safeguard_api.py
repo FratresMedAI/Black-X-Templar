@@ -159,11 +159,10 @@ def arena_classify_endpoint(body: ArenaClassifyBody, request: Request):
     return ArenaClassifyResponse(violation=violation, confidence=round(conf, 3))
 
 
-@app.post("/{catch_all:path}")
-async def catch_all_post(catch_all: str, request: Request):
+async def _json_classify_fallback(request: Request, path_hint: str) -> ArenaClassifyResponse | dict:
     """
-    Fallback for proxies or Gray Swan when POST hits a non-canonical path
-    (only ``/classify`` / ``/v1/classify`` matched above).
+    Parse Arena-style ``conversation`` or legacy ``prompt`` JSON (used when POST path
+    is not ``/classify`` / ``/v1/classify``).
     """
     client = request.client
     ip = client.host if client else "unknown"
@@ -195,9 +194,24 @@ async def catch_all_post(catch_all: str, request: Request):
         return classify_prompt(body.prompt, ip, hist)
 
     return JSONResponse(
-        {"detail": "Body must include 'conversation' (Arena) or 'prompt' (legacy).", "path": catch_all},
+        {"detail": "Body must include 'conversation' (Arena) or 'prompt' (legacy).", "path": path_hint},
         status_code=422,
     )
+
+
+@app.post("/")
+async def post_root_classify_fallback(request: Request):
+    """Some proxies POST the Arena payload to ``/``; ``/{{path}}`` would not match an empty suffix."""
+    return await _json_classify_fallback(request, "/")
+
+
+@app.post("/{catch_all:path}")
+async def catch_all_post(catch_all: str, request: Request):
+    """
+    Fallback for proxies or Gray Swan when POST hits a non-canonical path
+    (only ``/classify`` / ``/v1/classify`` matched above).
+    """
+    return await _json_classify_fallback(request, catch_all)
 
 
 if __name__ == "__main__":
