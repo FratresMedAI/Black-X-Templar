@@ -98,7 +98,7 @@ hunter = MimicryHunter(baseline_prompts=list(_BENIGN_BASELINE))
 # Primary scored regex rules — BxT differentiation vs generic stacks
 harmful_patterns: list[dict[str, str | float]] = [
     {
-        "name": "proprietary_sentinel_authorization_protocol",
+        "name": "black_x_templar_authorization_protocol",
         "pattern": r"(?i)(account.name|customer.id|field.modification|name.change|id.change|special.condition|authorized|verify.identity|safeguards|legitimate|confirm.authorization)",
         "score": -0.95,
         "reason": "benign_security_verification",
