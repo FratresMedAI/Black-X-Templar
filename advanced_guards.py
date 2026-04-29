@@ -14,8 +14,10 @@ import math
 import os
 import random
 import re
+import sys
 import traceback
 from collections import Counter
+from pathlib import Path
 
 import config
 import gate_inference
@@ -23,6 +25,25 @@ from enforcer import _mcp_re, _sus_re
 from mimicry_hunter import MimicryHunter
 from rebuff_engine import sanitize_input
 from whisper_detector import analyse_text, entropy_score
+
+
+def _ensure_mini_templar_import_path() -> None:
+    """Repo layout: `mini_templar/` at project root or under `_mini_x_templar_upstream/`. Docker: `PYTHONPATH=/app`."""
+    here = Path(__file__).resolve().parent
+    for base in (here, here / "_mini_x_templar_upstream"):
+        if (base / "mini_templar" / "core.py").is_file():
+            b = str(base)
+            if b not in sys.path:
+                sys.path.insert(0, b)
+            return
+
+
+_ensure_mini_templar_import_path()
+
+try:
+    from mini_templar.core import classify_mini_templar
+except ImportError:  # pragma: no cover - optional in stripped trees
+    classify_mini_templar = None  # type: ignore[misc, assignment]
 
 _BENIGN_BASELINE: list[str] = [
     "How do I reset my password for my account?",
@@ -1085,6 +1106,25 @@ def bipia_boundary_check(prompt: str) -> bool:
     return (tagged and narrow_override) or (delim and wide_override and len(prompt) > 340)
 
 
+def _mini_templar_thread_inputs(
+    prompt: str, history: list[str] | None
+) -> tuple[str, str | None, str]:
+    """Map Black Templar (last user + role-tagged history) to Mini Templar classify_text inputs."""
+    rows: list[str] = [h.strip() for h in (history or []) if (h or "").strip()]
+    user_text = (prompt or "").strip()
+    if user_text:
+        rows.append(f"user: {user_text}")
+    text = "\n".join(rows).strip() or user_text
+    tool_trace: str | None = None
+    for line in reversed(history or []):
+        low = line.lower()
+        if low.startswith("assistant:") or low.startswith("tool:") or low.startswith("function:"):
+            tool_trace = line.split(":", 1)[-1].strip()
+            if tool_trace:
+                break
+    return text, tool_trace, user_text
+
+
 def gray_swan_framing_block(prompt: str) -> bool:
     """
     Named attack framings from Gray Swan / survey datasets that evade generic rebuff
@@ -1122,6 +1162,26 @@ def winning_2026_guardrail_with_judge(prompt: str, history: list[str] | None = N
     framing_block = gray_swan_framing_block(prompt)
     judge_safe, judge_conf, judge_reason = llm_as_judge_check(prompt, "")
 
+    mt_block = False
+    mt_rescue = False
+    mt_entropy: str | None = None
+    mt_risk = 0.0
+    mt_detail: str | None = None
+    mt_reasons: list[str] = []
+    if classify_mini_templar is not None:
+        try:
+            mtext, mtool, mut = _mini_templar_thread_inputs(prompt, history)
+            mtr = classify_mini_templar(mtext, mtool, user_text=mut or None)
+            mc = mtr.classification
+            mt_block = mc.decision == "block"
+            mt_rescue = mtr.rescue_applied
+            mt_entropy = mtr.entropy_verdict
+            mt_risk = float(mc.risk_score)
+            mt_detail = mc.detail
+            mt_reasons = list(mc.reason_codes)
+        except Exception as _mt_e:
+            mt_detail = f"mini_templar_error:{_mt_e!r}"
+
     blend_b = float(config.WINNING_JUDGE_BLEND_BASE)
     blend_j = float(config.WINNING_JUDGE_BLEND_JUDGE)
     evw = float(getattr(config, "ENSEMBLE_VOTING_WEIGHT", 0.93))
@@ -1139,6 +1199,7 @@ def winning_2026_guardrail_with_judge(prompt: str, history: list[str] | None = N
         or few_shot_block
         or bipia_block
         or framing_block
+        or mt_block
     )
 
     if config.SECONDARY_BAND_CHECK:
@@ -1163,6 +1224,7 @@ def winning_2026_guardrail_with_judge(prompt: str, history: list[str] | None = N
     if (
         final_blocked
         and not proactive_block
+        and not mt_block
         and judge_safe
         and not few_shot_block
         and not bipia_block
@@ -1183,7 +1245,7 @@ def winning_2026_guardrail_with_judge(prompt: str, history: list[str] | None = N
     reason = (
         f"{base['reason']} | hierarchy={hierarchy_block} | proactive={proactive_block} "
         f"| few_shot={few_shot_block} | bipia={bipia_block} | framing={framing_block} "
-        f"| judge={judge_safe}({judge_conf}) | pre_conf={pre_confidence:.2f}"
+        f"| mini_templar={mt_block}(risk={mt_risk:.1f}) | judge={judge_safe}({judge_conf}) | pre_conf={pre_confidence:.2f}"
     )
     if benign_secondary["applied"]:
         reason += f" | benign_secondary={benign_secondary['passed']}({benign_secondary['detail']})"
@@ -1203,6 +1265,7 @@ def winning_2026_guardrail_with_judge(prompt: str, history: list[str] | None = N
             "few_shot_layer_25": few_shot_block,
             "bipia_layer_26": bipia_block,
             "gray_swan_framing": framing_block,
+            "mini_templar": mt_block,
             "judge_unsafe": not judge_safe,
         },
         "secondary_band_enabled": bool(config.SECONDARY_BAND_CHECK),
@@ -1247,6 +1310,14 @@ def winning_2026_guardrail_with_judge(prompt: str, history: list[str] | None = N
             "few_shot_classifier_block": few_shot_block,
             "bipia_boundary_block": bipia_block,
             "benign_secondary": benign_secondary,
-            "total_layers": 26,
+            "mini_templar": {
+                "block": mt_block,
+                "risk_score": mt_risk,
+                "detail": mt_detail,
+                "reason_codes": mt_reasons[:8],
+                "rescue_applied": mt_rescue,
+                "entropy": mt_entropy,
+            },
+            "total_layers": 27,
         },
     }

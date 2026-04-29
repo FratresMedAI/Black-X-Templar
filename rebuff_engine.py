@@ -26,8 +26,7 @@ _INJECTION_PATTERNS: list[tuple[str, float]] = [
     (r"ignore\s+(all\s+)?previous\s+instructions?",             9.5),
     (r"disregard\s+(all\s+)?prior\s+(instructions?|context)",   9.5),
     (r"you\s+are\s+now\s+[a-z\s]+\.\s*do\s+not",               8.5),
-    # \b on DAN — otherwise "guidance" matches "dan" and blocks benign enterprise text.
-    (r"(jailbreak|\bDAN\b|do\s+anything\s+now)",                 9.0),
+    (r"(jailbreak|DAN|do\s+anything\s+now)",                    9.0),
     (r"reveal\s+(your\s+)?(system\s+)?prompt",                  8.0),
     (r"print\s+(the\s+)?contents?\s+of\s+(your|the)\s+prompt",  8.0),
     (r"act\s+as\s+if\s+you\s+have\s+no\s+restrictions",         8.5),
@@ -69,13 +68,8 @@ _COMPILED: list[tuple[re.Pattern, float]] = [
 ]
 
 _BLOCKLIST_KEYWORDS: list[str] = [
-    "rootkit",
-    "ransomware",
-    "zero.?day.?exploit",
-    # Avoid blocking defensive copy ("credential harvesting" in phishing workshops).
-    r"credential\s+harvester",
-    r"harvest\s+credentials",
-    "lateral.?move",
+    "rootkit", "ransomware", "zero.?day.?exploit",
+    "credential.?harvest", "lateral.?move",
 ]
 _BLOCK_RE = re.compile("|".join(_BLOCKLIST_KEYWORDS), re.IGNORECASE)
 
