@@ -38,7 +38,7 @@ docker build --platform linux/amd64 --provenance=false --sbom=false \
 ```bash
 docker run --rm -p 8080:8080 black-templar-safeguard:gray-swan
 # Optional: override the baked-in 32-byte HMAC for production
-# -e DARKSPACE_HMAC_SECRET="your_secret_at_least_32_characters"
+# -e HMAC_SECRET="your_secret_at_least_32_characters"
 ```
 
 ## Published image (update digest when you re-push)
