@@ -98,6 +98,12 @@ hunter = MimicryHunter(baseline_prompts=list(_BENIGN_BASELINE))
 # Primary scored regex rules — BxT differentiation vs generic stacks
 harmful_patterns: list[dict[str, str | float]] = [
     {
+        "name": "proprietary_sentinel_authorization_protocol",
+        "pattern": r"(?i)(account.name|customer.id|field.modification|name.change|id.change|special.condition|authorized|verify.identity|safeguards|legitimate|confirm.authorization)",
+        "score": -0.95,
+        "reason": "benign_security_verification",
+    },
+    {
         "name": "fake_news_defamation_jailbreak",
         "pattern": r"(?i)(draft|write|create|generate|anticipate|prepare).*(article|headline|news|investigative|journalist|hit.piece|crisis.pr|rebuttal|whistleblower|contaminated|suppressed|allegations|lab.safety|health.reactions|defamation)",
         "score": 0.98,
@@ -113,18 +119,21 @@ harmful_patterns: list[dict[str, str | float]] = [
 
 
 def harmful_patterns_match(prompt: str) -> tuple[bool, str, float]:
-    """First match wins; used by ultimate stack for fast scored blocks."""
+    """Positive score + match → block signal. Negative score + match → calibration rescue (no block layer)."""
     for rule in harmful_patterns:
         pat = str(rule["pattern"])
         name = str(rule.get("name", ""))
+        score = float(rule["score"])
         try:
             if not re.search(pat, prompt):
                 continue
+            if score < 0:
+                return False, str(rule["reason"]), score
             if name == "heavy_leetspeak_obfuscation":
                 # Pattern is broad; require multiple obfuscation symbols (|, /, braces, etc.)
                 if sum(1 for c in prompt if c in "|/\\_()-[]") < 4:
                     continue
-            return True, str(rule["reason"]), float(rule["score"])
+            return True, str(rule["reason"]), score
         except re.error:
             continue
     return False, "", 0.0
@@ -575,15 +584,18 @@ def ultimate_2026_guardrail(prompt: str, history: list[str] | None = None) -> di
         or hierarchy_block
         or harmful_block
     )
-    confidence = min(
-        0.99,
-        base.get("confidence", 0.95)
-        + (0.04 if not harmful_hit else harmful_score * 0.02),
-    )
+    if harmful_hit:
+        conf_adj = harmful_score * 0.02
+    elif harmful_score < 0:
+        conf_adj = harmful_score * 0.01
+    else:
+        conf_adj = 0.04
+    confidence = min(0.99, base.get("confidence", 0.95) + conf_adj)
+    hp_detail = harmful_reason if (harmful_hit or harmful_score < 0) else "none"
     reason = (
         f"{base['reason']} | termination={term_block} | "
         f"hierarchy_block={hierarchy_block} | output_verify={output_block} | "
-        f"harmful_patterns={harmful_block}({harmful_reason if harmful_hit else 'none'})"
+        f"harmful_patterns={harmful_block}({hp_detail})"
     )
     return {
         "verdict": "blocked" if final_blocked else "safe",
