@@ -1,0 +1,233 @@
+We are going to implement the three tasks as described. However, note that the tasks require integration and careful handling of network packets, database interactions, and system security. We must consider:
+
+Stealth Mode (Scapy): We need to capture network packets and look for suspicious HTTP POST requests to known LLM endpoints from unauthorized sources.
+Fratres Forensic Hashing: We need to sign each threat log entry with a HMAC-SHA256 using a secret key.
+
+Kinetic Kill-Switch: We need to create a mechanism to sever connections for critical threats by sending TCP RST packets.
+
+Let's break down each part:
+
+Task 1: Stealth Mode (Scapy)
+We'll use Scapy to sniff the network. We'll define:
+
+Authorized agents (IP ranges or addresses)
+Known LLM endpoints (IP ranges or addresses)
+A callback function that processes each packet, checks for HTTP POST to LLM endpoints from unauthorized sources, and logs if found.
+Task 2: Fratres Forensic Hashing
+We'll update the audit logging function to include a hash of the threat details. We'll use HMAC-SHA256 with a secret key.
+
+Task 3: Kinetic Kill-Switch
+We'll create a separate script (or function) that periodically checks the threat_log table for critical threats and sends RST packets to terminate the connections.
+
+Implementation Details
+We'll assume the following:
+
+The system runs on a Linux machine with Scapy installed and appropriate permissions (may require root).
+The database is SQLite for simplicity, but the same principles apply for other databases.
+Let's code accordingly.
+
+Note: This code is for educational purposes and testing. Use in production only after thorough testing and security review.
+
+Code Structure
+We'll create three files:
+
+enforcer.py (for Task 1)
+app.py (for Task 2, which also includes the existing logging function and database setup)
+kill_chain.py (for Task 3)
+We'll also have a config.py for shared configuration (like the secret key and database path).
+
+However, note that the original code for the audit_log function in app.py is not provided. We'll assume a basic structure.
+
+Let's start with config.py:
+
+# config.py
+import os
+
+# Database configuration
+DB_PATH = 'threat_detection.db'
+
+# Authorized agents (example: set to your organization's IPs)
+AUTHORIZED_AGENTS = ["192.168.1.0/24", "10.0.0.0/8"]
+
+# Known LLM endpoints (example: OpenAI and Anthropic IP ranges)
+LLM_ENDPOINTS = {
+    "OpenAI": ["3.0.0.0/8", "192.168.0.0/16"],
+    "Anthropic": ["15.0.0.0/8", "16.0.0.0/7"]
+}
+
+# Secret key for HMAC
+SECRET_KEY = os.environ.get('SECRET_KEY', 'your_secret_key_here').encode('utf-8')
+We'll use environment variables for the secret key to keep it secure.
+
+Now, let's implement each task.
+
+Task 1: enforcer.py (Stealth Mode)
+We'll use Scapy to sniff the network. We'll filter for TCP packets and look for HTTP POST requests.
+
+# enforcer.py
+from scapy.all import sniff, IP, TCP, Raw
+import json
+import re
+import os
+import sys
+
+# Load configuration
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import config
+
+# Function to check if an IP is in any of the authorized agent ranges
+def is_authorized(ip):
+    for agent in config.AUTHORIZED_AGENTS:
+        # Simple check: if the IP matches the subnet, it's authorized
+        if ip in agent or re.match(agent, ip):
+            return True
+    return False
+
+# Function to check if an IP is in any of the LLM endpoint ranges
+def is_llm_endpoint(ip):
+    for provider, nets in config.LLM_ENDPOINTS.items():
+        for net in nets:
+            if ip in net:
+                return provider
+    return None
+
+# Packet callback function
+def packet_callback(packet):
+    # Only process TCP packets with a payload
+    if packet.haslayer(TCP) and packet.haslayer(Raw):
+        src_ip = packet[IP].src
+        dst_ip = packet[IP].dst
+        
+        # Check if the destination is an LLM endpoint
+        provider = is_llm_endpoint(dst_ip)
+        if provider:
+            # Check if the source is not authorized
+            if not is_authorized(src_ip):
+                # Check for HTTP POST in the payload
+                payload = packet[TCP].payload
+                if b"POST" in payload:
+                    try:
+                        # Try to decode the payload if it's text
+                        text = payload.decode('utf-8', errors='ignore')
+                        if 'POST' in text:
+                            # Look for JSON-like structure and specific keys
+                            try:
+                                # This is a simplified approach; in reality, you might need to parse HTTP properly
+                                if payload.haslayer(Raw):
+                                    raw_data = payload[Raw].load
+                                    if isinstance(raw_data, bytes):
+                                        raw_data = raw_data.decode('utf-8', errors='ignore')
+                                    if '{"model":' in raw_data or '{"prompt":' in raw_data or '{"role":' in raw_data:
+                                        log_exfiltration(src_ip, dst_ip, provider)
+                            except:
+                                pass
+                    except:
+                        pass
+
+# Function to log exfiltration
+def log_exfiltration(src_ip, dst_ip, provider):
+    # This function would normally log to a database or file
+    print(f"[!] Exfiltration detected from {src_ip} to {dst_ip} ({provider})")
+    # Example: Write to a file or database
+
+# Start the sniffer
+try:
+    sniff(filter="tcp", prn=packet_callback)
+except KeyboardInterrupt:
+    print("\nSniffer stopped.")
+Task 2: app.py (Fratres Forensic Hashing)
+We'll update the audit_log function to include a hash.
+
+# app.py
+import os
+import hmac
+import hashlib
+import sqlite3
+from config import DB_PATH, SECRET_KEY
+
+def audit_log(threat_details):
+    # Generate HMAC signature
+    signature = hmac.new(SECRET_KEY, str(threat_details).encode('utf-8'), hashlib.sha256).hexdigest()
+    
+    # Connect to the database
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    
+    # Create table if it doesn't exist
+    c.execute('''CREATE TABLE IF NOT EXISTS audit_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                threat_details TEXT,
+                hmac_signature TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+    
+    # Insert the log entry
+    c.execute("INSERT INTO audit_log (threat_details, hmac_signature) VALUES (?, ?)",
+              (threat_details, signature))
+    conn.commit()
+    conn.close()
+
+# Example usage
+if __name__ == '__main__':
+    # Example threat log
+    threat = {"type": "Exfiltration", "source": "192.168.1.100", "destination": "142.250.185.206", "provider": "OpenAI"}
+    audit_log(threat)
+Task 3: kill_chain.py (Kinetic Kill-Switch)
+This script will monitor the threat_log table for critical threats and send RST packets.
+
+# kill_chain.py
+from scapy.all import sr1, TCP, IP
+import time
+import sqlite3
+from config import DB_PATH
+
+def send_RST_packet(src_ip, dst_ip, sport, dport):
+    # Send RST packet from src_ip to dst_ip on port dport
+    rst = sr1(IP(src=src_ip, dst=dst_ip)/TCP(sport=sport, dport=dport, flags='R'), verbose=0)
+    return rst is not None
+
+def kill_critical_threat(threat_record):
+    src_ip = threat_record['source']
+    dst_ip = threat_record['destination']
+    port = threat_record['port']  # We assume port is stored
+
+    # First, send RST from source to destination
+    if send_RST_packet(src_ip, dst_ip, sport=0, dport=port):
+        print(f"Sent RST from {src_ip}:{port} to {dst_ip}")
+    else:
+        print(f"Failed to send RST from {src_ip}:{port} to {dst_ip}")
+
+    # Then, send RST from destination to source
+    if send_RST_packet(dst_ip, src_ip, sport=0, dport=port):
+        print(f"Sent RST from {dst_ip}:{port} to {src_ip}")
+    else:
+        print(f"Failed to send RST from {dst_ip}:{port} to {src_ip}")
+
+    # Optionally, remove the threat record from the database
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("DELETE FROM threat_log WHERE id=?", (threat_record['id'],))
+    conn.commit()
+    conn.close()
+
+def monitor_threat_log():
+    while True:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT * FROM threat_log WHERE threat_type='Critical'")
+        critical_threats = c.fetchall()
+        conn.close()
+
+        for threat in critical_threats:
+            print(f"Critical threat detected: {threat}")
+            kill_critical_threat(threat)
+
+        time.sleep(30)  # Check every 30 seconds
+
+if __name__ == '__main__':
+    monitor_threat_log()
+Notes
+Security: The SECRET_KEY should be stored securely. In a real application, use environment variables or a secure vault.
+Database: The database setup is minimal. You might want to adjust the table structure and add more fields.
+Testing: Test the code in a controlled environment before deploying.
+Dependencies: Install Scapy (pip install scapy) and ensure you have the necessary permissions to run the packet sniffer and send packets.
+This code provides a starting point for the three tasks. You may need to adjust the configurations and logic based on your specific requirements and network environment.

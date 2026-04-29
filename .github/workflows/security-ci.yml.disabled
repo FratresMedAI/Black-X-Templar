@@ -1,0 +1,135 @@
+name: security-ci
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  security-events: write
+  id-token: write
+
+jobs:
+  smoke-and-security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install runtime deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install security tooling
+        run: |
+          pip install bandit pip-audit semgrep cyclonedx-bom pytest
+
+      - name: Core security regression tests (pytest)
+        env:
+          DARKSPACE_HMAC_SECRET: "0123456789abcdef0123456789abcdef"
+        run: python -m pytest -q tests/test_core_security.py
+
+      - name: Regression + compliance smoke suite
+        env:
+          DARKSPACE_HMAC_SECRET: "0123456789abcdef0123456789abcdef"
+        run: python _smoke_v2.py
+
+      - name: SAST (Bandit JSON report)
+        run: bandit -r . -x .venv,__pycache__ -f json -o bandit-report.json
+
+      - name: Enforce Bandit medium/high blocker gate
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          report_path = Path("bandit-report.json")
+          if not report_path.exists():
+              raise SystemExit("bandit-report.json not found")
+
+          data = json.loads(report_path.read_text(encoding="utf-8"))
+          findings = data.get("results", [])
+          blockers = [
+              f for f in findings
+              if f.get("issue_severity") in {"MEDIUM", "HIGH"}
+          ]
+
+          print(f"Bandit findings total: {len(findings)}")
+          print(f"Bandit medium/high blockers: {len(blockers)}")
+
+          if blockers:
+              for f in blockers[:20]:
+                  print(
+                      f"- {f.get('filename')}:{f.get('line_number')} "
+                      f"{f.get('test_id')} {f.get('issue_severity')} "
+                      f"{f.get('issue_text')}"
+                  )
+              raise SystemExit(1)
+          PY
+
+      - name: SAST (Semgrep)
+        run: semgrep --config=p/ci --error --json --output semgrep-report.json
+
+      - name: Dependency vulnerability scan
+        run: pip-audit --strict
+
+      - name: Upload security scan reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: darkspace-security-reports
+          path: |
+            bandit-report.json
+            semgrep-report.json
+
+      - name: Generate CycloneDX SBOM
+        run: cyclonedx-py requirements --output-file sbom.cdx.json --output-format json requirements.txt
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: darkspace-sbom
+          path: sbom.cdx.json
+
+  release-sbom:
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate SPDX SBOM via Syft
+        uses: anchore/sbom-action@v0
+        with:
+          artifact-name: darkspace-release-sbom
+          format: spdx-json
+          output-file: sbom.spdx.json
+          path: .
+
+      - name: Install Cosign (Sigstore)
+        uses: sigstore/cosign-installer@v3.8.1
+
+      - name: Generate SBOM digest
+        run: sha256sum sbom.spdx.json > sbom.spdx.json.sha256
+
+      - name: Keyless sign SBOM digest (Sigstore)
+        run: cosign sign-blob --yes sbom.spdx.json.sha256 --output-signature sbom.spdx.json.sha256.sig --output-certificate sbom.spdx.json.sha256.pem
+
+      - name: Upload signed provenance artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: darkspace-release-provenance
+          path: |
+            sbom.spdx.json
+            sbom.spdx.json.sha256
+            sbom.spdx.json.sha256.sig
+            sbom.spdx.json.sha256.pem

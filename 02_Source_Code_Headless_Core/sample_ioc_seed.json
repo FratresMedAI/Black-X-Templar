@@ -1,0 +1,38 @@
+[
+  {
+    "ioc": "evil.example.com",
+    "ioc_type": "domain",
+    "threat_type": "botnet_cc",
+    "malware_printable": "Emotet",
+    "confidence_level": 90,
+    "reporter": "seed_pack",
+    "raw_json": {
+      "source": "offline_seed",
+      "note": "sample seed for air-gapped reviewer quickstart"
+    }
+  },
+  {
+    "ioc": "198.51.100.44",
+    "ioc_type": "ip",
+    "threat_type": "scanner",
+    "malware_printable": "Unknown",
+    "confidence_level": 70,
+    "reporter": "seed_pack",
+    "raw_json": {
+      "source": "offline_seed",
+      "note": "sample ip indicator"
+    }
+  },
+  {
+    "ioc": "d41d8cd98f00b204e9800998ecf8427e",
+    "ioc_type": "md5_hash",
+    "threat_type": "payload",
+    "malware_printable": "TestSample",
+    "confidence_level": 65,
+    "reporter": "seed_pack",
+    "raw_json": {
+      "source": "offline_seed",
+      "note": "sample file hash indicator"
+    }
+  }
+]

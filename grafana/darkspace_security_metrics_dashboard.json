@@ -1,0 +1,48 @@
+{
+  "title": "DARKSPACE Security Metrics",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Kinetic Action Success Rate",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "targets": [
+        {
+          "expr": "darkspace_kinetic_action_success_rate",
+          "legendFormat": "{{module}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Detection Latency",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "targets": [
+        {
+          "expr": "darkspace_smoke_detection_latency",
+          "legendFormat": "{{module}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Neural Mirror Correctness",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8},
+      "targets": [
+        {
+          "expr": "darkspace_neural_mirror_correctness",
+          "legendFormat": "{{module}}"
+        }
+      ]
+    }
+  ],
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  }
+}

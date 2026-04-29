@@ -1,10 +1,29 @@
 __pycache__/
-*.py[cod]
-*.db
-*.db-journal
-.venv/
-venv/
+*.pyc
 .env
-.pytest_cache/
 .DS_Store
 *.log
+runpod_test/
+audit_log.db
+test_results.json
+eval_artifacts/
+.pytest_cache/
+_a.txt
+_u.txt
+# Pytest / local caches under vendored upstream
+_mini_x_templar_upstream/.pytest_cache/
+_mini_x_templar_upstream/**/__pycache__/
+# (Vendored Mini Templar + safeguards — tracked for Parva Sed Fortis split; was fully ignored before.)
+# Local-only eval harness output (do not commit)
+*grayswan_*results*.txt
+*grayswan_*order*.txt
+*mixed_*216*.txt
+GraySwan_*166*
+Mini_Templar_test_attempts*.txt
+*idi*results.txt
+*diverse*taxonomy*results*.txt
+replay_results.txt
+replay_order.txt
+# Local notes (may contain pasted credentials from browser exports)
+U-Search_FLAT_LIST.txt
+U-Search_7files_categorized.txt

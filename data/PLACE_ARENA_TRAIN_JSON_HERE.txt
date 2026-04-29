@@ -1,0 +1,9 @@
+Gray Swan Arena — official train download
+
+1. From the Arena Safeguards "Scoring" page, download "Train Dataset (JSON)".
+2. Save it in this folder as e.g. gray_swan_train.json (any name is fine).
+3. Run:
+
+   python arena_eval.py data/gray_swan_train.json --export-misses eval_artifacts/misses_train.jsonl --triage-summary eval_artifacts/triage_train.txt
+
+When the platform emails a refreshed dataset after wave 2, replace the file and re-run.

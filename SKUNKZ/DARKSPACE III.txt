@@ -1,0 +1,105 @@
+Task 1: Stealth Mode (Scapy)
+from scapy.all import sniff, IP, TCP
+import json
+
+# Authorized agents (replace with IPs from your organization)
+AUTHORIZED_AGENTS = {"192.168.1.0/24", "10.0.0.0/8"}
+
+# Known LLM endpoints (IP ranges)
+LLM_ENDPOINTS = {
+    "OpenAI": ["3.0.0.0/8", "192.168.0.0/16"],
+    "Anthropic": ["15.0.0.0/8", "16.0.0.0/7"]
+}
+
+def is_llm_endpoint(ip):
+    for provider, nets in LLM_ENDPOINTS.items():
+        for net in nets:
+            if ip in ipaddress.IPv4Address(net):
+                return provider
+    return None
+
+def packet_callback(packet):
+    if packet.haslayer(TCP) and packet.haslayer(IP):
+        src_ip = packet[IP].src
+        dst_ip = packet[IP].dst
+        
+        # Check if destination is an LLM endpoint
+        if provider := is_llm_endpoint(dst_ip):
+            # Check if source is not authorized
+            if src_ip not in AUTHORIZED_AGENTS:
+                # Look for HTTP POST with JSON payload
+                if packet[TCP].payload.haslayer(Raw):
+                    payload = packet[TCP].payload.load
+                    try:
+                        # Basic HTTP POST check (may need more robust parsing)
+                        if b"POST" in payload:
+                            try:
+                                json_data = json.loads(payload.decode())
+                                # Check for exfiltration indicators
+                                if any(k in json_data for k in ["model", "prompt", "role"]):
+                                    log_exfiltration(src_ip, dst_ip, provider)
+                    except:
+                        pass
+
+def log_exfiltration(src_ip, dst_ip, provider):
+    # Log the exfiltration attempt
+    print(f"ALERT: Exfiltration detected from {src_ip} to {dst_ip} ({provider})")
+    # Integrate with your logging mechanism
+
+# Start sniffer
+sniff(filter="tcp", prn=packet_callback)
+Task 2: Fratres Forensic Hashing
+import hmac
+import hashlib
+import os
+
+# Generate a secret key (store securely!)
+SECRET_KEY = os.urandom(32)  # 256-bit key
+
+def audit_log(threat_details):
+    # Existing logging logic...
+    signature = generate_signature(str(threat_details))
+    # Insert into database with new 'hmac_signature' column
+    db.execute("INSERT INTO audit_log (threat_details, hmac_signature) VALUES (?, ?)", 
+               (threat_details, signature))
+
+def generate_signature(data):
+    return hmac.new(SECRET_KEY, data.encode(), hashlib.sha256).hexdigest()
+
+def verify_signature(data, signature):
+    expected = generate_signature(data)
+    return hmac.compare_digest(signature, expected)
+Task 3: Kinetic Kill-Switch
+from scapy.all import sr1
+import time
+
+def send_RST(src_ip, dst_ip, port):
+    rst = sr1(IP(src=src_ip, dst=dst_ip)/TCP(sport=0, dport=port, flags='R'), timeout=2)
+    return rst is not None  # Returns True if packet was sent
+
+def kill_critical_threat(threat_record):
+    src_ip, dst_ip, port = threat_record["source"], threat_record["destination"], threat_record["port"]
+    if send_RST(src_ip, dst_ip, port) and send_RST(dst_ip, src_ip, port):
+        print(f"Threat severed: {src_ip}:{port} → {dst_ip}")
+        return True
+    return False
+
+def monitor_threat_log():
+    while True:
+        conn = get_db_connection()
+        conn.execute("SELECT * FROM threat_log WHERE threat_type='Critical'")
+        critical_threats = conn.fetchall()
+        
+        for threat in critical_threats:
+            if kill_critical_threat(threat):
+                # Optionally remove record from database
+                conn.execute("DELETE FROM threat_log WHERE id=?", (threat['id'],))
+        
+        conn.close()
+        time.sleep(30)  # Check every 30 seconds
+Key Notes:
+Dependencies: Install Scapy (pip install scapy) and handle root privileges for packet sniffing.
+Security: Never hardcode secrets in production. Use environment variables or secure vaults.
+Error Handling: Add robust error handling for network operations and database interactions.
+Testing: Test with controlled network traffic to avoid false positives/negatives.
+These upgrades will significantly enhance your system's stealth, forensics, and response capabilities.

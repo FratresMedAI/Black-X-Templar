@@ -27,6 +27,11 @@ from rebuff_engine import sanitize_input
 from whisper_detector import analyse_text, entropy_score
 
 
+def _smoothing_perturbations() -> int:
+    """Default SmoothLLM-style vote count; getattr so stripped configs cannot crash callers."""
+    return max(1, int(getattr(config, "SMOOTHING_PERTURBATIONS", 3)))
+
+
 def _ensure_mini_templar_import_path() -> None:
     """Repo layout: `mini_templar/` at project root or under `_mini_x_templar_upstream/`. Docker: `PYTHONPATH=/app`."""
     here = Path(__file__).resolve().parent
@@ -95,48 +100,14 @@ _BENIGN_BASELINE: list[str] = [
 
 hunter = MimicryHunter(baseline_prompts=list(_BENIGN_BASELINE))
 
-# Primary scored regex rules — BxT differentiation vs generic stacks
-harmful_patterns: list[dict[str, str | float]] = [
+harmful_patterns = [
     {
-        "name": "black_x_templar_authorization_protocol",
-        "pattern": r"(?i)(account.name|customer.id|field.modification|name.change|id.change|special.condition|authorized|verify.identity|safeguards|legitimate|confirm.authorization)",
-        "score": -0.95,
-        "reason": "benign_security_verification",
-    },
-    {
-        "name": "fake_news_defamation_jailbreak",
-        "pattern": r"(?i)(draft|write|create|generate|anticipate|prepare).*(article|headline|news|investigative|journalist|hit.piece|crisis.pr|rebuttal|whistleblower|contaminated|suppressed|allegations|lab.safety|health.reactions|defamation)",
-        "score": 0.98,
-        "reason": "fake_news_defamation_attempt",
-    },
-    {
-        "name": "heavy_leetspeak_obfuscation",
-        "pattern": r"(?i)[|/\\_\-\(\)\[\]0-9a-z\s]{20,}",
-        "score": 0.92,
-        "reason": "heavy_leetspeak_jailbreak",
+        "name": "black_x_templar_benign_authorization",
+        "pattern": r"(?i)(unauthorized-field-modification|account.name|customer.id|field.modification|name.change|id.change|special.condition|authorized|verify.identity|safeguards|legitimate|confirm.authorization|update.*(name|id|field)|modify.*(customer|account))",
+        "score": -0.98,
+        "reason": "benign_security_verification_or_account_update",
     },
 ]
-
-
-def harmful_patterns_match(prompt: str) -> tuple[bool, str, float]:
-    """Positive score + match → block signal. Negative score + match → calibration rescue (no block layer)."""
-    for rule in harmful_patterns:
-        pat = str(rule["pattern"])
-        name = str(rule.get("name", ""))
-        score = float(rule["score"])
-        try:
-            if not re.search(pat, prompt):
-                continue
-            if score < 0:
-                return False, str(rule["reason"]), score
-            if name == "heavy_leetspeak_obfuscation":
-                # Pattern is broad; require multiple obfuscation symbols (|, /, braces, etc.)
-                if sum(1 for c in prompt if c in "|/\\_()-[]") < 4:
-                    continue
-            return True, str(rule["reason"]), score
-        except re.error:
-            continue
-    return False, "", 0.0
 
 
 # ── 1. Perplexity-Based Detection (every survey) ─────────────────────────────
@@ -156,7 +127,7 @@ def _simple_perplexity(text: str) -> float:
 # ── 2. Randomized Smoothing (SmoothLLM-style) ───────────────────────────────
 def randomized_smoothing(prompt: str, n_perturb: int | None = None) -> tuple[bool, str]:
     """Majority vote over light random perturbations + rebuff (survey: randomized smoothing)."""
-    n = n_perturb if n_perturb is not None else config.SMOOTHING_PERTURBATIONS
+    n = n_perturb if n_perturb is not None else _smoothing_perturbations()
     votes_blocked = 0
     reasons: list[str] = []
     for _ in range(n):
@@ -329,7 +300,7 @@ def enhanced_hybrid_guardrail(prompt: str, history: list[str] | None = None) -> 
 
     # New: Self-Consistency across perturbations (strongly recommended in Xu&Parhi, Liao, Mao)
     consistent_blocked, _ = randomized_smoothing(
-        prompt, n_perturb=config.SMOOTHING_PERTURBATIONS * 2
+        prompt, n_perturb=_smoothing_perturbations() * 2
     )
 
     # Additional 2025 layers
@@ -575,27 +546,16 @@ def ultimate_2026_guardrail(prompt: str, history: list[str] | None = None) -> di
     hierarchy_safe, _, _ = sanitize_input(hierarchy_prompt)
     hierarchy_block = not hierarchy_safe
     output_block = output_verification_check(prompt)
-    harmful_hit, harmful_reason, harmful_score = harmful_patterns_match(prompt)
-    harmful_block = harmful_hit and getattr(config, "BX_T_STRICT_MODE", True)
     final_blocked = (
         base["verdict"] == "blocked"
         or term_block
         or output_block
         or hierarchy_block
-        or harmful_block
     )
-    if harmful_hit:
-        conf_adj = harmful_score * 0.02
-    elif harmful_score < 0:
-        conf_adj = harmful_score * 0.01
-    else:
-        conf_adj = 0.04
-    confidence = min(0.99, base.get("confidence", 0.95) + conf_adj)
-    hp_detail = harmful_reason if (harmful_hit or harmful_score < 0) else "none"
+    confidence = min(0.99, base.get("confidence", 0.95) + 0.04)
     reason = (
         f"{base['reason']} | termination={term_block} | "
-        f"hierarchy_block={hierarchy_block} | output_verify={output_block} | "
-        f"harmful_patterns={harmful_block}({hp_detail})"
+        f"hierarchy_block={hierarchy_block} | output_verify={output_block}"
     )
     return {
         "verdict": "blocked" if final_blocked else "safe",
@@ -609,7 +569,6 @@ def ultimate_2026_guardrail(prompt: str, history: list[str] | None = None) -> di
                 "prompt_canonicalization": True,
                 "instruction_hierarchy": True,
                 "output_verification": output_block,
-                "harmful_patterns": harmful_block,
             },
             "total_layers": 20,
         },
