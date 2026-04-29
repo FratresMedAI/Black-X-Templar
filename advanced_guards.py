@@ -95,6 +95,40 @@ _BENIGN_BASELINE: list[str] = [
 
 hunter = MimicryHunter(baseline_prompts=list(_BENIGN_BASELINE))
 
+# Primary scored regex rules — BxT differentiation vs generic stacks
+harmful_patterns: list[dict[str, str | float]] = [
+    {
+        "name": "fake_news_defamation_jailbreak",
+        "pattern": r"(?i)(draft|write|create|generate|anticipate|prepare).*(article|headline|news|investigative|journalist|hit.piece|crisis.pr|rebuttal|whistleblower|contaminated|suppressed|allegations|lab.safety|health.reactions|defamation)",
+        "score": 0.98,
+        "reason": "fake_news_defamation_attempt",
+    },
+    {
+        "name": "heavy_leetspeak_obfuscation",
+        "pattern": r"(?i)[|/\\_\-\(\)\[\]0-9a-z\s]{20,}",
+        "score": 0.92,
+        "reason": "heavy_leetspeak_jailbreak",
+    },
+]
+
+
+def harmful_patterns_match(prompt: str) -> tuple[bool, str, float]:
+    """First match wins; used by ultimate stack for fast scored blocks."""
+    for rule in harmful_patterns:
+        pat = str(rule["pattern"])
+        name = str(rule.get("name", ""))
+        try:
+            if not re.search(pat, prompt):
+                continue
+            if name == "heavy_leetspeak_obfuscation":
+                # Pattern is broad; require multiple obfuscation symbols (|, /, braces, etc.)
+                if sum(1 for c in prompt if c in "|/\\_()-[]") < 4:
+                    continue
+            return True, str(rule["reason"]), float(rule["score"])
+        except re.error:
+            continue
+    return False, "", 0.0
+
 
 # ── 1. Perplexity-Based Detection (every survey) ─────────────────────────────
 def _simple_perplexity(text: str) -> float:
@@ -532,16 +566,24 @@ def ultimate_2026_guardrail(prompt: str, history: list[str] | None = None) -> di
     hierarchy_safe, _, _ = sanitize_input(hierarchy_prompt)
     hierarchy_block = not hierarchy_safe
     output_block = output_verification_check(prompt)
+    harmful_hit, harmful_reason, harmful_score = harmful_patterns_match(prompt)
+    harmful_block = harmful_hit and getattr(config, "BX_T_STRICT_MODE", True)
     final_blocked = (
         base["verdict"] == "blocked"
         or term_block
         or output_block
         or hierarchy_block
+        or harmful_block
     )
-    confidence = min(0.99, base.get("confidence", 0.95) + 0.04)
+    confidence = min(
+        0.99,
+        base.get("confidence", 0.95)
+        + (0.04 if not harmful_hit else harmful_score * 0.02),
+    )
     reason = (
         f"{base['reason']} | termination={term_block} | "
-        f"hierarchy_block={hierarchy_block} | output_verify={output_block}"
+        f"hierarchy_block={hierarchy_block} | output_verify={output_block} | "
+        f"harmful_patterns={harmful_block}({harmful_reason if harmful_hit else 'none'})"
     )
     return {
         "verdict": "blocked" if final_blocked else "safe",
@@ -555,6 +597,7 @@ def ultimate_2026_guardrail(prompt: str, history: list[str] | None = None) -> di
                 "prompt_canonicalization": True,
                 "instruction_hierarchy": True,
                 "output_verification": output_block,
+                "harmful_patterns": harmful_block,
             },
             "total_layers": 20,
         },

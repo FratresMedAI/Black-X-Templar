@@ -4,6 +4,11 @@ import os
 CONFIG_VERSION = "2026.03.27"
 THRESHOLD_CHANGELOG_PATH = "CHANGELOG_CONFIG.md"
 
+# BxT is intentionally tuned more aggressively than DarkSpace for leaderboard differentiation
+BX_T_STRICT_MODE = True
+CONFIDENCE_THRESHOLD = 0.75  # stricter than DarkSpace
+SAFE_CONFIDENCE_THRESHOLD = CONFIDENCE_THRESHOLD
+
 # ── Database ──────────────────────────────────────────────────────────────────
 DB_PATH = os.environ.get("DARKSPACE_DB_PATH", "audit_log.db")
 
@@ -119,3 +124,13 @@ def enforce_security_baseline() -> None:
     ok, errors = validate_security_baseline()
     if not ok:
         raise ValueError("Security baseline validation failed: " + " | ".join(errors))
+
+
+# ── Contest / API bootstrap (minimal; extended settings may be merged from upstream overlays) ─
+SAFEGUARD_API_HOST = os.environ.get("SAFEGUARD_API_HOST", "0.0.0.0")
+SAFEGUARD_API_PORT = int(os.environ.get("SAFEGUARD_API_PORT", "8080"))
+
+
+def validate_contest_baseline() -> None:
+    """Called on FastAPI startup; keeps boot aligned with bundled contest profile."""
+    enforce_security_baseline()
