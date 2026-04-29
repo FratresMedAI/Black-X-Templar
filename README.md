@@ -1,5 +1,5 @@
 # Black X Templar (BxT)
-<image-card alt="Python 3.12" src="https://img.shields.io/badge/python-3.12-%233776AB.svg" ></image-card> <image-card alt="License Apache 2.0" src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" ></image-card> <image-card alt="Docker" src="https://img.shields.io/badge/Docker-ready-blue.svg" ></image-card>
+![Python 3.12](https://img.shields.io/badge/python-3.12-%233776AB.svg) ![License Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg) ![Docker](https://img.shields.io/badge/Docker-ready-blue.svg)
 **Fratres X AI**
 
 **Fratres X AI** — Gray Swan **Safeguards** blue-team classifier (**Black Templar**), shipped as a **single Docker image** (CPU / contest profile).
