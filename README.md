@@ -51,7 +51,7 @@ docker run --rm -p 8080:8080 black-templar-safeguard:gray-swan
 
 - [ ] `docker pull` the tag above; run `/health` and one `/v1/classify` call.
 - [ ] Confirm this **repo** source tree + **image digest** match what Gray Swan received.
-- [ ] `DARKSPACE_HMAC_SECRET` in production: override per environment; default in image is for contest boot only.
+- [ ] `HMAC_SECRET` in production: override per environment; default in image is for contest boot only.
 
 ## License
 
