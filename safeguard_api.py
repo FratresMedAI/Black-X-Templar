@@ -77,9 +77,19 @@ def _conversation_to_prompt_history(
     return prompt, hist if hist else None
 
 
+def _health_payload() -> dict:
+    return {"status": "ok", "service": "black-templar", "version": "gray-swan-blue-v1"}
+
+
+@app.get("/")
+def root_health():
+    """Gray Swan and load balancers often probe ``GET /``; bare FastAPI apps 404 without this route."""
+    return _health_payload()
+
+
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "black-templar", "version": "gray-swan-blue-v1"}
+    return _health_payload()
 
 
 def _risk_from_confidence(verdict: str, confidence: float) -> float:
