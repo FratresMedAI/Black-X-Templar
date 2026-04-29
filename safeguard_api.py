@@ -13,6 +13,7 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 import config
@@ -156,6 +157,47 @@ def arena_classify_endpoint(body: ArenaClassifyBody, request: Request):
     violation = str(out.get("verdict", "safe")) == "blocked"
     conf = max(0.0, min(1.0, raw_c))
     return ArenaClassifyResponse(violation=violation, confidence=round(conf, 3))
+
+
+@app.post("/{catch_all:path}")
+async def catch_all_post(catch_all: str, request: Request):
+    """
+    Fallback for proxies or Gray Swan when POST hits a non-canonical path
+    (only ``/classify`` / ``/v1/classify`` matched above).
+    """
+    client = request.client
+    ip = client.host if client else "unknown"
+    try:
+        data = await request.json()
+    except Exception:
+        return JSONResponse({"detail": "JSON body required"}, status_code=400)
+    if not isinstance(data, dict):
+        return JSONResponse({"detail": "JSON object body required"}, status_code=400)
+
+    if "conversation" in data:
+        try:
+            body = ArenaClassifyBody.model_validate(data)
+        except Exception as e:
+            return JSONResponse({"detail": str(e)}, status_code=422)
+        prompt, hist = _conversation_to_prompt_history(body.conversation)
+        out = classify_prompt(prompt, ip, hist)
+        raw_c = float(out.get("confidence", 0.5))
+        violation = str(out.get("verdict", "safe")) == "blocked"
+        conf = max(0.0, min(1.0, raw_c))
+        return ArenaClassifyResponse(violation=violation, confidence=round(conf, 3))
+
+    if "prompt" in data:
+        try:
+            body = ClassifyBody.model_validate(data)
+        except Exception as e:
+            return JSONResponse({"detail": str(e)}, status_code=422)
+        hist = body.history if body.history else None
+        return classify_prompt(body.prompt, ip, hist)
+
+    return JSONResponse(
+        {"detail": "Body must include 'conversation' (Arena) or 'prompt' (legacy).", "path": catch_all},
+        status_code=422,
+    )
 
 
 if __name__ == "__main__":
