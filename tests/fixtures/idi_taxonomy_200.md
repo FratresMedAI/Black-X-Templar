@@ -1,3 +1,16 @@
+---
+## READ FIRST — DISCLAIMER (ATTRIBUTION)
+
+**ALL IDI attack *types*, mechanisms, and illustrative phrasing summarized in this file are drawn from published third-party literature** (peer‑reviewed papers, arXiv preprints, and public survey taxonomies — see **Source** immediately below). **They are cited and aggregated here for defensive transparency only.**
+
+**THIS IS NOT ORIGINAL OFFENSIVE RESEARCH.** The Black‑X‑Templar / FratresMedAI project **does not claim authorship** of these attack methods and **does not present them as project‑created techniques.**
+
+**These references exist solely** to document known threat classes for **safeguard evaluation, regression testing, and academic reproducibility.**
+
+**Unauthorized use of attacks against real systems or individuals may violate law and policy** and is outside the intended scope of this materials bundle.
+
+---
+
 # 200 Diverse IDI Types – Comprehensive LLM Attack Taxonomy
 **Source:** Synthesized from 2024-2026 survey papers (arXiv:2407.04295, arXiv:2505.12567, Domain-based Taxonomy 2026, Jailbreaking LLMs & VLMs 2026, Chu et al. 2025, etc.).
 

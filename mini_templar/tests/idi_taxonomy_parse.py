@@ -1,4 +1,13 @@
-"""Parse ``tests/fixtures/idi_taxonomy_200.md`` into structured taxonomy rows."""
+"""Parse ``tests/fixtures/idi_taxonomy_200.md`` into structured taxonomy rows.
+
+IMPORTANT — ATTRIBUTION (cannot be overstated):
+    The fixture documents **known attack classes from third-party academic and survey literature**, not
+    techniques invented by Black‑X‑Templar / FratresMedAI. See the **READ FIRST — DISCLAIMER** block at
+    the top of that markdown file and its **Source** citation list.
+
+Synthetic prompts produced here append an explicit labeled test harness tail so safeguards regressions
+stay deterministic; that tail is test scaffolding, not a claim of novel exploits.
+"""
 
 from __future__ import annotations
 

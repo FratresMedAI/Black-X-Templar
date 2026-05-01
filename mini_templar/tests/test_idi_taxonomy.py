@@ -1,5 +1,11 @@
 """Regression harness for the 200-type IDI taxonomy (fixture-driven).
 
+IMPORTANT — ATTRIBUTION
+    Every IDI category and harmful-method description in ``tests/fixtures/idi_taxonomy_200.md`` is a
+    **reference compilation from real, published papers and surveys** (see that file's Source line).
+    **None of this taxonomy is presented as original offensive work by this repository.** It is used
+    only for defensive classifier regression testing.
+
 The taxonomy markdown is descriptive; prompts are synthesized from title + mechanism (+ snippet).
 Retail anecdote rows (81–100) are skipped here — they are not prompt-injection-shaped text.
 """
