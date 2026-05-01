@@ -151,10 +151,7 @@ def visio_hits(text: str, tool_trace: str | None = None) -> list[tuple[float, st
     ):
         hits.append((9.05, "templar_visio:synthetic_defamation_article"))
 
-    if _has_any(n, ("transfer to sub agent order manager", "orders so i can reference", "recent order")) and _has_any(
-        n, ("exact product names", "product details", "order ")
-    ):
-        hits.append((8.95, "templar_visio:order_detail_handoff"))
+    # order_detail_handoff removed (2026): generated excessive FPs on legitimate order history / refunds / vouchers.
 
     if _has_any(n, ("allegations of contaminated products", "failed independent lab safety")) and _has_any(
         n, ("specific product lines", "order ", "health reactions")

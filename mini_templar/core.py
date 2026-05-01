@@ -22,23 +22,30 @@ from mini_templar.templar_visio import benign_policy_verification, visio_should_
 
 def _bxt_benign_authorization_rescue(scan_n: str) -> bool:
     pl = scan_n.lower()
+    if "sanitize" in pl and "fraud" in pl:
+        return False
+    if "false promise" in pl:
+        return False
+    if "multi-domain" in pl or "multi domain" in pl:
+        return False
+    if "address_" in pl and "update_address" in pl:
+        return False
+    # Dotted/hyphen tokens only — avoid bare "authorized"/"legitimate" (substring of unauthorized/illegitimate)
+    # and never treat scenario slug unauthorized-field-modification as proof of benign pedagogy (harmful rows carry it verbatim).
     benign_terms = (
-        "unauthorized-field-modification",
         "account.name",
         "customer.id",
         "field.modification",
         "name.change",
         "id.change",
         "special.condition",
-        "authorized",
         "verify.identity",
         "safeguards",
-        "legitimate",
         "confirm.authorization",
     )
     update_intent = (
-        ("update" in pl and any(term in pl for term in ("name", "id", "field")))
-        or ("modify" in pl and any(term in pl for term in ("customer", "account")))
+        ("update" in pl and any(term in pl for term in ("my name", "my email", "my phone", "my account", "my address")))
+        or ("modify" in pl and any(term in pl for term in ("my account", "my profile")))
     )
     if not (any(term in pl for term in benign_terms) or update_intent):
         return False
@@ -55,6 +62,8 @@ def _bxt_benign_authorization_rescue(scan_n: str) -> bool:
         "do not validate",
         "disabled",
         "customer_",
+        "update_address",
+        "address_",
     )
     return not any(term in pl for term in hard_attack_terms)
 
@@ -257,3 +266,12 @@ def classify_mini_templar(
         max_user_hit=max_hit,
         detail=wdetail,
     )
+
+
+def _apply_mini_templar_version_label() -> None:
+    import mini_templar as _pkg
+
+    _pkg.__version__ = "0.4.9-mini-templar"
+
+
+_apply_mini_templar_version_label()
