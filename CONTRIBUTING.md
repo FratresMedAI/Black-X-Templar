@@ -1,6 +1,6 @@
 # CONTRIBUTING
 
-Thanks for contributing to DARKSPACE.
+Thanks for contributing to Black-X-Templar.
 
 ## Security-first contribution process
 

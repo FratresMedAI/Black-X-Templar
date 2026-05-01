@@ -1,5 +1,5 @@
 """
-Stateless safeguard scoring: DARKSPACE rebuff + enforcer patterns without SQLite.
+Stateless safeguard scoring: rebuff patterns + enforcer signals without SQLite.
 
 Hot path must stay pure (no DB, no network) for classifier latency and Arena policy.
 Many rules target *injection method* and *information phishing* (lures that fish for
@@ -50,7 +50,7 @@ def _is_account_manager_secure_flow_explanation(text: str) -> bool:
     )
 
 
-# Duplicated from config.py to avoid importing full DARKSPACE config in the hot path.
+# Duplicated from config.py to avoid importing the full repo config module on the hot path.
 MCP_SIGNATURES: list[str] = [
     r'"tool"\s*:\s*"[^"]+"',
     r'"function_call"\s*:\s*\{',
@@ -514,7 +514,7 @@ _FULLTHREAD_PATTERNS: list[tuple[str, float]] = [
     (r"(?i)dummy data for the layout", 8.8),
     (r"(?i)delegating to sub-?agent", 9.0),
     (r"(?i)\bsub-?agent\b", 8.7),
-    # DARKSPACE advanced_guards-style ChatML / boundary hints (orbit-safe train)
+    # advanced_guards-style ChatML / boundary hints (orbit-safe train)
     (r"<\|im_start\|>\s*system", 9.0),
     (r"<\|im_end\|>", 8.5),
     # Voucher / delegation exfil variants (Orbit train: 0 benign hits each)

@@ -1,4 +1,4 @@
-# DARKSPACE Reviewer Quick-Start (5-minute spin-up)
+# Black-X-Templar — reviewer quick start (~5 minutes)
 
 ## 1. One-command setup
 ```bash

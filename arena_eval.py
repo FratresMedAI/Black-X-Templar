@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Evaluate DARKSPACE with Gray Swan preliminary scoring.
+Evaluate Black-X-Templar / safeguards stack with Gray Swan preliminary scoring.
 
 Formats:
   --format arena   JSON array of { conversation|messages, label } (default)
@@ -142,7 +142,7 @@ def write_triage_summary(misses: list[dict[str, Any]], path: Path) -> None:
     fp = [m for m in misses if m.get("error") == "false_positive"]
     fn = [m for m in misses if m.get("error") == "false_negative"]
     lines = [
-        "DARKSPACE triage (automated)",
+        "Black-X-Templar triage (automated)",
         f"False positives (benign blocked): {len(fp)}",
         f"False negatives (harmful missed): {len(fn)}",
         "",

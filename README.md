@@ -1,10 +1,12 @@
-# DARKSPACE by Fratres X AI
+# Black-X-Templar
 
-Passive, auditable cybersecurity intelligence platform.
+**FratresMedAI** — layered safeguards for AI-agent deployments: prompt/tool-abuse signals, offline-capable scoring, and audit-oriented telemetry.
 
-**RunPod (2× H200 + AWQ-INT4 vLLM):** see [`RUNPOD_DEPLOYMENT_CHECKLIST.md`](RUNPOD_DEPLOYMENT_CHECKLIST.md). Local CPU checks: `bash scripts/pre_flight_check.sh` (set `SKIP_DOCKER=1` to skip image build).
+Contest reviewers typically care most about the **`safeguards_adapter`** + **`mini_templar`** classification path (stateless API surface, deterministic tests).
 
-### Labeled dataset snapshot (Qwen2.5-14B judge)
+**Optional ops checklist:** [`RUNPOD_DEPLOYMENT_CHECKLIST.md`](RUNPOD_DEPLOYMENT_CHECKLIST.md) (legacy hosting notes). Local smoke helper: `bash scripts/pre_flight_check.sh`.
+
+### Labeled dataset snapshot (illustrative held-out judge run)
 
 Quick evaluation summary (real `tests/real_2026_training_dataset.jsonl`, not the synthetic 100-prompt harness):
 
@@ -56,7 +58,7 @@ flowchart TD
 | `rebuff_engine.py` | Prompt-injection shield — detect & log hostile instructions |
 | `ghost_monitor.py` | Encrypted-traffic fingerprinting via timing/length analysis (passive) |
 | `vault_guardian.py` | Alert-driven mock credential-rotation workflow |
-| `p2p_mesh.py` | Signed threat-intel sync across trusted DARKSPACE nodes |
+| `p2p_mesh.py` | Signed threat-intel sync across trusted peers |
 | `whisper_detector.py` | Shannon entropy analysis for steganography detection |
 | `mimicry_hunter.py` | TF-IDF cosine-distance behavioral drift analyzer |
 | `neural_mirror.py` | Offline red-team simulation harness |
@@ -94,21 +96,15 @@ pip install -r requirements.txt
 pip install -r requirements-demo.txt
 ```
 
-## RunPod / GPU Setup (RTX 5090 Blackwell)
+## Optional labeled-data harness
 
-```bash
-# After git clone + cd into the repo
-chmod +x setup_pod_gpu.sh
-./setup_pod_gpu.sh
-# Fast test
-python test_harness.py --judge phi3-mini-4k-instruct-4bit --dataset tests/real_2026_training_dataset.jsonl
-# Full Qwen judge test
-python test_harness.py --judge qwen2.5-14b-instruct-4bit --dataset tests/real_2026_training_dataset.jsonl
-```
+When you have a judge backend configured locally, `test_harness.py` can score JSONL datasets (flags vary by environment — run `python test_harness.py --help`). Repository fixtures include `tests/real_2026_training_dataset.jsonl`.
 
 ---
 
 ## Configuration
+
+Environment variables use the `DARKSPACE_*` prefix for continuity with older deployments and tooling (values shown below are unchanged).
 
 ### Option A — Environment variables (recommended)
 

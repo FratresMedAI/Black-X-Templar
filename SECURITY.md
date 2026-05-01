@@ -2,7 +2,7 @@
 
 ## Threat Model
 
-DARKSPACE is a defensive, auditable AI-security platform designed for passive detection and controlled active response.
+Black-X-Templar is a defensive, auditable AI-security codebase aimed at passive detection, safeguard scoring, and controlled active-response hooks where enabled.
 
 Primary threat classes:
 - Prompt-injection and policy-bypass attempts

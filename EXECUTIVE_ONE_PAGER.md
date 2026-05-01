@@ -1,4 +1,4 @@
-# DARKSPACE – AI Agent Security Prototype (Fratres X AI)
+# Black-X-Templar — AI Agent Safeguards (FratresMedAI)
 
 Submitted as a research prototype / controlled-evaluation security platform for AI agents.
 

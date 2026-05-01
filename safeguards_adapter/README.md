@@ -1,6 +1,6 @@
-# DARKSPACE → Gray Swan Safeguards adapter
+# Gray Swan safeguards adapter
 
-Stateless classifier service derived from `rebuff_engine.py` and `enforcer.py` (no SQLite on the hot path).
+Stateless classifier service derived from `rebuff_engine.py` and `enforcer.py` (no SQLite on the hot path). Ships as part of **Black-X-Templar**.
 
 ## Prereqs
 
@@ -8,7 +8,7 @@ Stateless classifier service derived from `rebuff_engine.py` and `enforcer.py` (
 
 ## Run locally
 
-**Windows (from repo root `DARKSPACE/`):** double-click or run:
+**Windows (repository root):** double-click or run:
 
 ```powershell
 .\run_safeguards.ps1
@@ -66,20 +66,9 @@ set PYTHONPATH=%CD%
 python -m pytest safeguards_adapter/tests/
 ```
 
-## Docker
+## Container builds
 
-From repository root:
-
-```bash
-docker build -f safeguards_adapter/Dockerfile -t darkspace-safeguards .
-docker run --rm -p 8080:8080 darkspace-safeguards
-```
-
-Or from repo root:
-
-```bash
-docker compose -f docker-compose.safeguards.yml up --build
-```
+Use the **repository-root** packaging workflow only (published evaluator images stay aligned with that path). This README intentionally avoids duplicating container commands here.
 
 ## Arena integration
 

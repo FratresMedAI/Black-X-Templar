@@ -6,8 +6,8 @@ python-dotenv==1.1.1
 fastapi
 uvicorn[standard]
 httpx==0.28.1
-# ── GPU judge stack (stable cu124 — RunPod A40/4090, PyTorch 2.4 image) ──
-# pip forbids >= with +cu128 local labels; use cu124 index instead of nightly Blackwell.
+# ── Optional PyTorch stack (CUDA 12.4 wheels) for local judge / embedding workloads ──
+# Prefer this PyTorch index when you need CUDA builds compatible with sentence-transformers.
 --extra-index-url https://download.pytorch.org/whl/cu124
 torch>=2.4.0,<2.7.0
 torchvision>=0.19.0

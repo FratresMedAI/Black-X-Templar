@@ -1,4 +1,4 @@
-# DARKSPACE Executive Summary
+# Black-X-Templar — Executive Summary
 
 **Submitted as:** Research prototype / controlled-evaluation security platform for AI agents.
 
