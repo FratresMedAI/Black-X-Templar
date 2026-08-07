@@ -1,3 +1,16 @@
+## Maturity
+
+| Field | Value |
+|---|---|
+| **Status** | Arena entry |
+| **Maturity** | Low |
+| **Field-ready** | No — not clinical, not field-certified |
+| **Last reviewed** | 2026-08-07 |
+
+Gray Swan Safeguards Arena blue-team classifier prototype. Low maturity is not a flaw; unverified absolute claims are.
+
+---
+
 # Black-X-Templar
 
 **FratresMedAI** — layered safeguards for AI-agent deployments: prompt/tool-abuse signals, offline-capable scoring, and audit-oriented telemetry.
